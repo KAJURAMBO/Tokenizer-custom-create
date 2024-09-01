@@ -6,6 +6,7 @@ e.g. isolating all regex/pattern parts to the RegexTokenizer, but
 some concessions are made for simplicity.
 """
 import unicodedata
+from typing import Optional
 
 # -----------------------------------------------------------------------------
 # a few helper functions useful for both BasicTokenizer and RegexTokenizer
@@ -22,7 +23,7 @@ def get_stats(ids, counts=None):
     return counts
 
 
-def merge(ids, pair, idx):
+def merge(ids, pair, idx, stats: Optional[dict] = None):
     """
     In the list of integers (ids), replace all consecutive occurrences
     of pair with the new integer token idx
@@ -30,13 +31,29 @@ def merge(ids, pair, idx):
     """
     newids = []
     i = 0
+    curr_new_idx = -1
     while i < len(ids):
         # if not at the very last position AND the pair matches, replace it
         if ids[i] == pair[0] and i < len(ids) - 1 and ids[i+1] == pair[1]:
             newids.append(idx)
+            curr_new_idx += 1
+            if stats is not None:
+                if (curr_new_idx > 0): # there is a token before this pair. Updating stat
+                    old_pair = (newids[curr_new_idx - 1], ids[i])
+                    new_pair = (newids[curr_new_idx - 1], idx)
+                    assert old_pair in stats
+                    stats[old_pair] -= 1
+                    stats[new_pair] = stats.get(new_pair, 0) + 1
+                if (i < (len(ids) - 2)): # there is a token after this pair. Updating stat
+                    old_pair = (ids[i + 1], ids[i + 2])
+                    new_pair = (idx, ids[i + 2])
+                    assert old_pair in stats
+                    stats[old_pair] -= 1
+                    stats[new_pair] = stats.get(new_pair, 0) + 1
             i += 2
         else:
             newids.append(ids[i])
+            curr_new_idx += 1
             i += 1
     return newids
 

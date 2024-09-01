@@ -47,16 +47,14 @@ class RegexTokenizer(Tokenizer):
         merges = {} # (int, int) -> int
         vocab = {idx: bytes([idx]) for idx in range(256)} # idx -> bytes
         for i in range(num_merges):
-            # count the number of times every consecutive pair appears
             stats = {}
             for chunk_ids in ids:
-                # passing in stats will update it in place, adding up counts
                 get_stats(chunk_ids, stats)
             # find the pair with the highest count
             pair = max(stats, key=stats.get)
             # mint a new token: assign it the next available id
             idx = 256 + i
-            # replace all occurrences of pair in ids with idx
+            # replace all occurrences of pair in ids with idx and update pair-count simultaneously
             ids = [merge(chunk_ids, pair, idx) for chunk_ids in ids]
             # save the merge
             merges[pair] = idx
@@ -64,6 +62,7 @@ class RegexTokenizer(Tokenizer):
             # prints
             if verbose:
                 print(f"merge {i+1}/{num_merges}: {pair} -> {idx} ({vocab[idx]}) had {stats[pair]} occurrences")
+            stats[pair] = 0
 
         # save class variables
         self.merges = merges # used in encode()
